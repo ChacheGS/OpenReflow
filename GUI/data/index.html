@@ -1,0 +1,277 @@
+<!--
+  FSWebServer - Example Index Page
+  Copyright (c) 2015 Hristo Gochkov. All rights reserved.
+  This file is part of the ESP8266WebServer library for Arduino environment.
+
+  This library is free software; you can redistribute it and/or
+  modify it under the terms of the GNU Lesser General Public
+  License as published by the Free Software Foundation; either
+  version 2.1 of the License, or (at your option) any later version.
+  This library is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+  You should have received a copy of the GNU Lesser General Public
+  License along with this library; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+-->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+  <title>Open Reflow</title>
+
+    <!-- CSS
+    –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+    <link rel="stylesheet" href="normalize.min.css">
+    <link rel="stylesheet" href="skeleton.min.css">
+    <link rel="stylesheet" href="fonts.css">
+    <link rel="stylesheet" href="dropdown.css">
+    <link rel="stylesheet" href="canvas.css">
+
+
+
+    <script type="text/javascript">
+          var phase,temp,time;
+          var reloadPeriod = 1000;
+          var running = false;
+
+          function loadValues(){
+            if(!running) return;
+            var xh = new XMLHttpRequest();
+            xh.onreadystatechange = function(){
+              if (xh.readyState == 4){
+                if(xh.status == 200) {
+                  var res = JSON.parse(xh.responseText);
+                  console.log(res)
+                  //phase.add(res.phase);
+                  //temp.add(res.temp);
+                  //time.add(res.time);
+                  myChart.data.datasets.forEach((dataset) => {
+                        if(dataset.label == "currentTemp")
+                              dataset.data.push({x:res.time, y:res.temp});
+                  });
+                  myChart.update();
+                  console.log("Update " +"{x:"+res.time+", y:"+res.temp+"}")
+                  if(running) setTimeout(loadValues, reloadPeriod);
+            } else running = false;
+      }
+};
+xh.open("GET", "/all", true);
+xh.send(null);
+};
+
+function run(){
+      if(!running){
+        running = true;
+        loadValues();
+  }
+}
+
+function onBodyLoad(){
+      var refreshInput = document.getElementById("refresh-rate");
+      refreshInput.value = reloadPeriod;
+      refreshInput.onchange = function(e){
+              var value = parseInt(e.target.value);
+              reloadPeriod = (value > 0)?value:0;
+              e.target.value = reloadPeriod;
+      }
+      var stopButton = document.getElementById("stop-button");
+      stopButton.onclick = function(e){
+            console.log("on stop");
+            document.getElementById("stop-button").classList.remove("button-primary");
+            document.getElementById("start-button").classList.add("button-primary");
+            document.getElementById("curve-parameters").classList.add("button-primary");
+            document.getElementById("default-curve-parameters").classList.add("button-primary");
+
+            document.getElementById("start-button").disabled = false;
+            document.getElementById("stop-button").disabled = true;
+            document.getElementById("curve-parameters").disabled = true;
+            document.getElementById("default-curve-parameters").disabled = true;
+            running = false;
+      }
+      var startButton = document.getElementById("start-button");
+      startButton.onclick = function(e){
+            console.log("on start");
+            document.getElementById("start-button").classList.remove("button-primary");
+            document.getElementById("stop-button").classList.add("button-primary");
+            document.getElementById("curve-parameters").classList.remove("button-primary");
+            document.getElementById("default-curve-parameters").classList.remove("button-primary");
+            document.getElementById("start-button").disabled = true;
+            document.getElementById("stop-button").disabled = false;
+            document.getElementById("curve-parameters").disabled = false;
+            document.getElementById("default-curve-parameters").disabled = false;
+
+
+            //Empty current temp
+            myChart.data.datasets.forEach((dataset) => {
+                  if(dataset.label == "currentTemp"){
+                        while(dataset.data.length > 0)
+                              dataset.data.pop();
+                  }
+            });
+            myChart.update();
+
+            run();
+
+      }
+
+      // Example with 10K thermistor
+      //function calcThermistor(v) {
+      //  var t = Math.log(((10230000 / v) - 10000));
+      //  t = (1/(0.001129148+(0.000234125*t)+(0.0000000876741*t*t*t)))-273.15;
+      //  return (t>120)?0:Math.round(t*10)/10;
+      //}
+      //temp = createGraph(document.getElementById("analog"), "Temperature", 100, 128, 10, 40, false, "cyan", calcThermistor);
+      //run();
+}
+</script>
+</head>
+<body id="index" style="margin:0; padding:0;" onload="onBodyLoad()">
+
+  <!-- Primary Page Layout –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <div class="band navigation">
+    <nav class="container primary">
+        <div class="sixteen columns">
+            <ul>
+                <li><a style="background: #33C3F0;" href="index.html">Home</a></li>
+                <li><a href="settings.html">Settings</a></li>
+                <li><a href="about.html">About</a></li>
+          </ul>
+    </div>
+</nav>
+</div>
+
+
+<div class="section intro">
+    <div class="container">
+
+      <div class="row">
+            <h1 >Open Reflow</h1>
+      </div>
+      <div class="row">
+        <div class="one-half column">
+          <h4 class="intro-heading">(Alert Message)</h4>
+              <input  class="button button-primary" type="button" id="start-button" value="Start Reflow"/>
+              <input class="button" type="button" id="stop-button" value="Stop!" disabled="disabled"/>
+    </div>
+   <!--  <div class="one-half column phones">
+          <img src="horno.jpg" alt="Smiley face" height="150" width="250">
+    </div> -->
+</div>
+<div class="row"; id="form-parameters">
+      <form action="/set_parameters.html" method="POST" id="pidform">
+            <label for="minSpeed"></label><label style="text-align: center">Ramp-Up</label><label  style="text-align: center">Preheating</label><label style="text-align: center">Reflow</label><label style="text-align: center">Cool</label>
+            <br/>
+            <label for="minSpeed">Min Speed:</label><input type="text" name="minSpeed1" id="minSpeed1" style="width: 10rem; text-align: center ;" value="1"> <input type="text" name="minSpeed" id="minSpeed2" style="width: 10rem; text-align: center ; margin-right: .3rem" value="0.3"><input type="text" name="minSpeed3" id="minSpeed3" style="width: 10rem; text-align: center ; margin-right: .3rem" value="0"><label></label><label  >(°C/s)</label>
+            <br/>
+            <label for="maxSpeed">Max Speed:</label><input type="text" name="maxSpeed1" id="maxSpeed1" style="width: 10rem ;text-align: center ;" value="3"> <input type="text" name="maxSpeed" id="maxSpeed2" style="width: 10rem; text-align: center ; margin-right: .3rem" value="0.8"><input type="text" name="maxSpeed3" id="maxSpeed3" style="width: 10rem; text-align: center ; margin-right: .3rem" value="0.2"><label></label><label  >(°C/s)</label>
+            <br/>
+            <label for="endTemp">End Temp:</label><input type="text" name="endTemp1" id="endTemp1" style="width: 10rem; text-align: center ;" value="150"> <input type="text" name="endTemp" id="endTemp2" style="width: 10rem; text-align: center ; margin-right: .3rem" value="200"><input type="text" name="endTemp3" id="endTemp3" style="width: 10rem; text-align: center ; margin-right: .3rem" value="245"><input type="text" name="endTemp4" id="endTemp4" style="width: 10rem; text-align: center ; margin-right: .3rem" value="0"><label  >(°C)</label>
+            <br/>
+
+            <input class="button button-primary" id="curve-parameters" type="Submit" value="Submit Curve Parameters">  <input class="button button-primary" id="default-curve-parameters" type="Submit" value="Back to Standard Curve">
+      </form>
+</div>
+</div>
+
+
+<div class="chart-container">
+<div>
+    <label>Period (ms):</label>
+    <input type="number" id="refresh-rate"/>
+</div>
+  <canvas id="myChart"></canvas>
+</div>
+<script src="Chart.min.js"></script>
+
+<script>
+      var ctx = document.getElementById("myChart");
+      var myChart = new Chart(ctx, {
+          type: 'scatter',
+          data: {
+              datasets: [{
+                        label: 'maxTemp',
+                        data: [{x:0,y:30},
+                              {x:5,y:60},
+                              {x:10,y:90},
+                              {x:20,y:130},
+                              {x:30,y:160},
+                              {x:40,y:190},
+                              {x:50,y:198},
+                              {x:55,y:210},
+                              {x:60,y:220},
+                              {x:65,y:230},
+                              {x:70,y:245},
+                              {x:75,y:246},
+                              {x:85,y:245},
+                              {x:100,y:230},
+                              {x:110,y:200},
+                              {x:120,y:170},
+                              {x:130,y:30}],
+                        fill: '1',
+                        showLine: true,
+                        pointRadius:0,
+                        borderColor: 'rgb(255, 0, 0)',
+                        borderWidth: 1
+                  },
+                  {
+                        label: 'minTemp',
+                        data: [{x:0,y:30},
+                              {x:5,y:50},
+                              {x:10,y:70},
+                              {x:20,y:100},
+                              {x:30,y:130},
+                              {x:40,y:160},
+                              {x:50,y:170},
+                              {x:55,y:180},
+                              {x:60,y:190},
+                              {x:65,y:200},
+                              {x:70,y:215},
+                              {x:75,y:216},
+                              {x:85,y:215},
+                              {x:100,y:210},
+                              {x:110,y:170},
+                              {x:120,y:140},
+                              {x:130,y:30}],
+                        fill: false,
+                        showLine: true,
+                        pointRadius:0,
+                        borderColor: 'rgb(0, 0, 255)',
+                        borderWidth: 1
+                  },
+                  {
+                        label: 'currentTemp',
+                        data: [{x:0,y:30},
+                              {x:5,y:55},
+                              {x:10,y:80},
+                              {x:25,y:120},
+                              {x:30,y:149},
+                              {x:40,y:165},
+                              {x:45,y:175},
+                              {x:51,y:190},
+                              {x:55,y:200}],
+                        borderColor: 'rgb(0, 255, 0)',
+                        showLine: true,
+                        fill: false,
+                        borderWidth: 1
+                  }]
+            },
+            options: {
+              scales: {
+                  xAxes: [{
+                      type: 'linear',
+                      position: 'bottom'
+                  }]
+                  }
+                  }
+      });
+</script>
+
+
+
+
+</div>
+
+</body>
+</html>
